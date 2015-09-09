@@ -54,7 +54,6 @@ func (j *Joystick) eventLoop() {
 
 		io.ReadAtLeast(j.device, input, 24)
 
-		log.Print(input)
 		buf := bytes.NewReader(input)
 
 		event := new(event)
