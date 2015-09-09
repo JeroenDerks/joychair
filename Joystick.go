@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"log"
 	"os"
-	"io"
 	"bytes"
 )
 
@@ -52,26 +51,23 @@ func (j *Joystick) eventLoop() {
 
 
 
-		io.ReadAtLeast(j.device, input, 24)
+		j.device.Read(input)
 
-		buf := bytes.NewReader(input)
+		byteReader := bytes.NewReader(input)
 
 		event := new(event)
 
-		binary.Read(buf, binary.LittleEndian, &event.time)
-		binary.Read(buf, binary.LittleEndian, &event.value)
-		binary.Read(buf, binary.LittleEndian, &event.typ)
-		err := binary.Read(buf, binary.LittleEndian, &event.code)
+		binary.Read(byteReader, binary.LittleEndian, &event.time)
+		binary.Read(byteReader, binary.LittleEndian, &event.value)
+		binary.Read(byteReader, binary.LittleEndian, &event.typ)
+
+		err := binary.Read(byteReader, binary.LittleEndian, &event.code)
 
 		if err != nil {
 			log.Fatal("binary.Read failed:", err)
 		}
-		// if event.typ == 0 && event.code == 0 && event.value == 0 {
-		// 	continue
-		// }
-		//... so what now?
-		log.Printf("I had a event: %v", event);
 
+		log.Printf("I had a event: %v", event);
 	}
 }
 
