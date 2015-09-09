@@ -1,11 +1,11 @@
 package joychair
 
 import (
-	"bytes"
 	"encoding/binary"
 	"log"
 	"os"
-	"syscall"
+	"io"
+	"bytes"
 )
 
 type Joystick struct {
@@ -15,10 +15,22 @@ type Joystick struct {
 
 }
 
+/*
+ * https://www.kernel.org/doc/Documentation/input/joystick-api.txt
+ * defines:
+ * 	struct js_event {
+ *		__u32 time;     /* event timestamp in milliseconds
+ *		__s16 value;    /* value
+ *		__u8 type;      /* event type
+ *		__u8 number;    /* axis/button number
+ *	};
+ */
+
+
 type event struct {
-	time syscall.Timeval
-	typ, code uint16
-	value uint32
+	time uint32
+	value int16
+	typ, code uint8
 }
 
 func InitJoystick(dev string) Joystick {
@@ -32,27 +44,32 @@ func InitJoystick(dev string) Joystick {
 	return j
 }
 
-func(j *Joystick)eventLoop() {
+func (j *Joystick) eventLoop() {
+
+	input := make([]byte, 24, 24)
+
 	for {
 
-		input := make([]byte, 24, 24)
-		j.device.Read(input)
 
+
+		io.ReadAtLeast(j.device, input, 24)
+
+		log.Print(input)
 		buf := bytes.NewReader(input)
+
 		event := new(event)
 
-		binary.Read(buf, binary.LittleEndian, &event.time.Sec)
-		binary.Read(buf, binary.LittleEndian, &event.time.Usec)
+		binary.Read(buf, binary.LittleEndian, &event.time)
+		binary.Read(buf, binary.LittleEndian, &event.value)
 		binary.Read(buf, binary.LittleEndian, &event.typ)
-		binary.Read(buf, binary.LittleEndian, &event.code)
-		err := binary.Read(buf, binary.LittleEndian, &event.value)
+		err := binary.Read(buf, binary.LittleEndian, &event.code)
 
 		if err != nil {
 			log.Fatal("binary.Read failed:", err)
 		}
-		if event.typ == 0 && event.code == 0 && event.value == 0 {
-			continue
-		}
+		// if event.typ == 0 && event.code == 0 && event.value == 0 {
+		// 	continue
+		// }
 		//... so what now?
 		log.Printf("I had a event: %v", event);
 
