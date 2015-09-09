@@ -45,7 +45,7 @@ func InitJoystick(dev string) Joystick {
 
 func (j *Joystick) eventLoop() {
 
-	input := make([]byte, 24, 24)
+	input := make([]byte, 8, 8)
 
 	for {
 
