@@ -51,7 +51,11 @@ func (j *Joystick) eventLoop() {
 
 
 
-		j.device.Read(input)
+		_, err := j.device.Read(input)
+
+		if err != nil {
+			log.Fatal("Problem reading joystick:", err)
+		}
 
 		byteReader := bytes.NewReader(input)
 
@@ -61,7 +65,7 @@ func (j *Joystick) eventLoop() {
 		binary.Read(byteReader, binary.LittleEndian, &event.value)
 		binary.Read(byteReader, binary.LittleEndian, &event.typ)
 
-		err := binary.Read(byteReader, binary.LittleEndian, &event.code)
+		err = binary.Read(byteReader, binary.LittleEndian, &event.code)
 
 		if err != nil {
 			log.Fatal("binary.Read failed:", err)
