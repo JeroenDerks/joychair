@@ -8,7 +8,6 @@ import (
 )
 
 type Joystick struct {
-	X, Y int
 	devicePath string
 	device *os.File
 
@@ -26,7 +25,7 @@ type Joystick struct {
  */
 
 
-type event struct {
+type Event struct {
 	time uint32
 	value int16
 	typ, code uint8
@@ -35,21 +34,17 @@ type event struct {
 func InitJoystick(dev string) Joystick {
 	log.Printf("Joystick with path: %s", dev)
 
-	j := Joystick{X: 0, Y:0, devicePath: dev}
+	j := Joystick{devicePath: dev}
 	j.open()
-
-	j.eventLoop()
 
 	return j
 }
 
-func (j *Joystick) eventLoop() {
+func (j *Joystick) readLoop(c chan Event) {
 
 	input := make([]byte, 8, 8)
 
 	for {
-
-
 
 		_, err := j.device.Read(input)
 
@@ -59,7 +54,7 @@ func (j *Joystick) eventLoop() {
 
 		byteReader := bytes.NewReader(input)
 
-		event := new(event)
+		event := new(Event)
 
 		binary.Read(byteReader, binary.LittleEndian, &event.time)
 		binary.Read(byteReader, binary.LittleEndian, &event.value)
@@ -71,11 +66,11 @@ func (j *Joystick) eventLoop() {
 			log.Fatal("binary.Read failed:", err)
 		}
 
-		log.Printf("I had a event: %v", event);
+		c <- *event
 	}
 }
 
-func (j *Joystick)open() error {
+func (j *Joystick) open() error {
 	file, err := os.Open(j.devicePath)
 
 	if err != nil {
