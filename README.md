@@ -51,7 +51,7 @@ Ive had some trouble getting the ps3 controller and pi reliably connect to each 
 
 Start off by making sure bluetooth is not started on boot
 ```
-sudo update-rc.d -f bluetooth removesudo update-rc.d -f bluetooth remove
+sudo update-rc.d -f bluetooth remove
 ```
 
 Then, put this at the *end* of your `/etc/rc.local`
