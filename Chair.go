@@ -38,17 +38,16 @@ type chairData struct {
 }
 
 
-func InitChair(dev string, stick *Joystick) Chair {
-	log.Printf("Chair with path: %s", dev)
+func InitChair(c *serial.Config, stick *Joystick) Chair {
+	log.Printf("Chair with path: %s", c.Name)
 
-	c := &serial.Config{Name: dev, Baud: 115200}
 	s, err := serial.OpenPort(c)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	chair := Chair{devicePath: dev, device:s, stick: stick, chairMsgs: make(chan chairResponse)}
+	chair := Chair{devicePath: c.Name, device:s, stick: stick, chairMsgs: make(chan chairResponse)}
 
 	return chair
 }

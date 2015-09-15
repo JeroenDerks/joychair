@@ -7,6 +7,10 @@ import (
 	"bytes"
 )
 
+type JoystickConfig struct {
+	Name string
+}
+
 type Joystick struct {
 	devicePath string
 	device *os.File
@@ -31,10 +35,10 @@ type Event struct {
 	typ, code uint8
 }
 
-func InitJoystick(dev string) Joystick {
-	log.Printf("Joystick with path: %s", dev)
+func InitJoystick(c *JoystickConfig) Joystick {
+	log.Printf("Joystick with path: %s", c.Name)
 
-	j := Joystick{devicePath: dev}
+	j := Joystick{devicePath: c.Name}
 	j.open()
 
 	return j

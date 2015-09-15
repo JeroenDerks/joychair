@@ -1,0 +1,6 @@
+[Chair]
+Baud = 115200
+Name = "/dev/ttyACM0"
+
+[Joystick]
+Name = "/dev/input/js0"
