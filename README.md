@@ -42,6 +42,13 @@ Test with:
 jstest /dev/input/js0
 ```
 
+## Building joychair for the pi
+Go to the cli folder, and cross compile it:
+```
+env GOOS=linux GOARCH=arm go build joychair.go
+```
+
+
 ## Starting up on boot
 Ive had some trouble getting the ps3 controller and pi reliably connect to each other. I am doing this to make it kind of reliable:
 
@@ -63,3 +70,4 @@ sixad-bin 0 0 0 &
 ```
 
 As you might have guessed, if sixad-bin decides to exit or crash, it may startup the bluetooth service once again and your out of luck :)
+
