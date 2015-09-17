@@ -15,13 +15,13 @@ type Chair struct {
 	device *serial.Port
 	stick *Joystick
 	x, y int8
-	battery, speed uint8
+	battery, speed, error uint8
 	chairMsgs chan chairResponse
 }
 
 type chairResponse struct {
 	typ uint8
-	unknown uint8
+	error uint8
 	unknown2 uint8
 	battery uint8
 	speed uint8
@@ -59,7 +59,7 @@ func (c *Chair) Loop() {
 
 	go c.readLoop()
 
-	ticker := time.Tick(15 * time.Millisecond)
+	ticker := time.Tick(25 * time.Millisecond)
 
 
 	for {
@@ -69,6 +69,7 @@ func (c *Chair) Loop() {
 			//log.Printf("The chair sent something: %v", cRes)
 			c.battery = cRes.battery
 			c.speed = cRes.speed
+			c.error = cRes.error
 			c.formatCliLine()
 		case sEvent := <- stickChan:
 			//log.Printf("Stick sent something: %v", sEvent)
@@ -84,9 +85,9 @@ func (c *Chair) Loop() {
 func (c *Chair) handleJoystickEvent(e *Event) {
 	switch e.code {
 		case 2: //Y axis, right stick
-			c.y = int8(e.value)
+			c.y = convertInt16ToInt8(e.value)
 		case 3: //X axis, right stick
-			c.x = int8(e.value)
+			c.x = convertInt16ToInt8(e.value)
 	}
 }
 
@@ -96,7 +97,7 @@ func (c *Chair) sendData() {
 }
 
 func (d *chairData) bytes() []byte {
-	bytes := []byte{d.typ, d.command, d.unknown, byte(d.y), byte(d.x), 0}
+	bytes := []byte{d.typ, d.command, d.unknown, byte(d.x), byte(d.y), 0}
 	bytes[5] = calculateCheckSum(bytes)
 	return bytes
 }
@@ -112,16 +113,24 @@ func calculateCheckSum(b []byte) byte {
 }
 
 func (c *Chair) formatCliLine() {
-	fmt.Printf("\rB:%d S:%d Y:%d X:%d      ", c.battery, c.speed, c.y, c.x)
+	fmt.Printf("\rE:%d B:%d S:%d Y:%d X:%d      ", c.error, c.battery, c.speed, c.y, c.x)
 }
 
 func (c *Chair) readLoop() {
 
-	input := make([]byte, 6, 6)
-
+	input := make([]byte, 5, 5)
+	startByte := make([]byte, 1, 1)
 	for {
 
-		_, err := io.ReadAtLeast(c.device, input, 6)
+		//Wait for the start byte, its 84
+		for {
+			c.device.Read(startByte)
+			if startByte[0] == 84 {
+				break;
+			}
+		}
+
+		_, err := io.ReadAtLeast(c.device, input, 5)
 
 		if err != nil {
 			log.Fatal("Problem reading chair:", err)
@@ -129,10 +138,9 @@ func (c *Chair) readLoop() {
 
 		byteReader := bytes.NewReader(input)
 
-		cRes := new(chairResponse)
+		cRes := chairResponse{typ: 84}
 
-		binary.Read(byteReader, binary.LittleEndian, &cRes.typ)
-		binary.Read(byteReader, binary.LittleEndian, &cRes.unknown)
+		binary.Read(byteReader, binary.LittleEndian, &cRes.error)
 		binary.Read(byteReader, binary.LittleEndian, &cRes.unknown2)
 		binary.Read(byteReader, binary.LittleEndian, &cRes.battery)
 		binary.Read(byteReader, binary.LittleEndian, &cRes.speed)
@@ -143,6 +151,19 @@ func (c *Chair) readLoop() {
 			log.Fatal("binary.Read failed:", err)
 		}
 
-		c.chairMsgs <- *cRes
+		//log.Printf("Chair said: %v", cRes)
+
+		c.chairMsgs <- cRes
 	}
+}
+
+func convertInt16ToInt8(in int16) (out int8) {
+	x := ((int32(in) - 32768) * 256) / 65535
+	x = x + 128
+
+	//we are just shifting the range from -128 - 127 to -100 -100
+	out = int8((x - -128) * (100 - -100) / (127 - -128) + -100)
+	//log.Printf("%d became %d and then %d", in, x, out);
+
+	return
 }
