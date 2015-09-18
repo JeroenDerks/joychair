@@ -85,9 +85,9 @@ func (c *Chair) Loop() {
 func (c *Chair) handleJoystickEvent(e *Event) {
 	switch e.code {
 		case 2: //Y axis, right stick
-			c.y = convertInt16ToInt8(e.value)
-		case 3: //X axis, right stick
-			c.x = convertInt16ToInt8(e.value)
+			c.y = convertDirectionToChair(e.value)
+		case 3: //X axis, right stick (this needs to be flipped to match the joystick)
+			c.x = convertDirectionToChair(e.value) * -1
 	}
 }
 
@@ -157,7 +157,7 @@ func (c *Chair) readLoop() {
 	}
 }
 
-func convertInt16ToInt8(in int16) (out int8) {
+func convertDirectionToChair(in int16) (out int8) {
 	x := ((int32(in) - 32768) * 256) / 65535
 	x = x + 128
 
