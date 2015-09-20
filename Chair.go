@@ -17,6 +17,7 @@ type Chair struct {
 	x, y int8
 	battery, speed, error uint8
 	chairMsgs chan chairResponse
+	cntr uint64
 }
 
 type chairResponse struct {
@@ -59,7 +60,7 @@ func (c *Chair) Loop() {
 
 	go c.readLoop()
 
-	ticker := time.Tick(25 * time.Millisecond)
+	ticker := time.Tick(10 * time.Millisecond)
 
 
 	for {
@@ -70,14 +71,14 @@ func (c *Chair) Loop() {
 			c.battery = cRes.battery
 			c.speed = cRes.speed
 			c.error = cRes.error
-			c.formatCliLine()
 		case sEvent := <- stickChan:
 			//log.Printf("Stick sent something: %v", sEvent)
 			c.handleJoystickEvent(&sEvent)
-			c.formatCliLine()
 		case <- ticker:
 			//log.Printf("It is time to send data to the chair")
+			start := time.Now()
 			c.sendData()
+			c.formatCliLine(start)
 		}
 	}
 }
@@ -92,6 +93,7 @@ func (c *Chair) handleJoystickEvent(e *Event) {
 }
 
 func (c *Chair) sendData() {
+	c.cntr++;
 	payLoad := chairData{typ: 74, command: 0, y: c.y, x: c.x}
 	c.device.Write(payLoad.bytes())
 }
@@ -112,8 +114,9 @@ func calculateCheckSum(b []byte) byte {
 	return sum
 }
 
-func (c *Chair) formatCliLine() {
-	fmt.Printf("\rE:%d B:%d S:%d Y:%d X:%d      ", c.error, c.battery, c.speed, c.y, c.x)
+func (c *Chair) formatCliLine(start time.Time) {
+	elapsed := time.Since(start)
+	fmt.Printf("\rE:%d B:%d S:%d Y:%d X:%d C:%d elpsd: %v      ", c.error, c.battery, c.speed, c.y, c.x, c.cntr, elapsed)
 }
 
 func (c *Chair) readLoop() {
