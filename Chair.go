@@ -15,7 +15,7 @@ type Chair struct {
 	device *serial.Port
 	stick *Joystick
 	x, y int8
-	battery, speed, error uint8
+	pendingCommand, battery, speed, error uint8
 	chairMsgs chan chairResponse
 	cntr uint64
 }
@@ -89,12 +89,28 @@ func (c *Chair) handleJoystickEvent(e *Event) {
 			c.y = convertDirectionToChair(e.value)
 		case 3: //X axis, right stick (this needs to be flipped to match the joystick)
 			c.x = convertDirectionToChair(e.value) * -1
+		case 8: //Speed down left trigger
+			log.Printf("Slowing down %v", e.value)
+
+			if e.value == 1 {
+				c.pendingCommand = 2
+			}
+
+		case 9: //speed up, right trigger
+			log.Printf("Speeding up %v", e.value)
+			if e.value == 1 {
+				c.pendingCommand = 4
+			}
 	}
 }
 
 func (c *Chair) sendData() {
 	c.cntr++;
-	payLoad := chairData{typ: 74, command: 0, y: c.y, x: c.x}
+	payLoad := chairData{typ: 74, command: c.pendingCommand, y: c.y, x: c.x}
+	
+	//reset the command
+	c.pendingCommand = 0
+
 	c.device.Write(payLoad.bytes())
 }
 
