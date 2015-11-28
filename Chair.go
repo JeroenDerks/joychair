@@ -1,43 +1,48 @@
 package joychair
 
 import (
-	"log"
 	"bytes"
 	"encoding/binary"
-	"github.com/tarm/serial"
-	"time"
-	"io"
 	"fmt"
+	"github.com/tarm/serial"
+	"io"
+	"log"
+	"time"
 )
 
 type Chair struct {
-	devicePath string
-	device *serial.Port
-	stick *Joystick
-	x, y int8
+	devicePath                            string
+	device                                *serial.Port
+	stick                                 *Joystick
+	x, y                                  int8
 	pendingCommand, battery, speed, error uint8
-	chairMsgs chan chairResponse
-	cntr uint64
+	chairMsgs                             chan ChairResponse
+	cntr                                  uint64
+	joyServer                             *JoyServer
 }
 
-type chairResponse struct {
-	typ uint8
-	error uint8
+type ChairResponse struct {
+	typ      uint8
+	error    uint8
 	unknown2 uint8
-	battery uint8
-	speed uint8
-	crc uint8
+	battery  uint8
+	speed    uint8
+	crc      uint8
 }
 
 type chairData struct {
-	typ uint8
+	typ     uint8
 	command uint8
 	unknown uint8
-	y int8
-	x int8
-	crc uint8
+	y       int8
+	x       int8
+	crc     uint8
 }
 
+func (d *ChairResponse) bytes() []byte {
+	bytes := []byte{d.typ, d.error, d.unknown2, d.battery, d.speed, d.crc}
+	return bytes
+}
 
 func InitChair(c *serial.Config, stick *Joystick) Chair {
 	log.Printf("Chair with path: %s", c.Name)
@@ -47,8 +52,8 @@ func InitChair(c *serial.Config, stick *Joystick) Chair {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	chair := Chair{devicePath: c.Name, device:s, stick: stick, chairMsgs: make(chan chairResponse)}
+	joyServer := InitJoyServer()
+	chair := Chair{devicePath: c.Name, device: s, stick: stick, chairMsgs: make(chan ChairResponse), joyServer: &joyServer}
 
 	return chair
 }
@@ -62,19 +67,21 @@ func (c *Chair) Loop() {
 
 	ticker := time.Tick(10 * time.Millisecond)
 
-
 	for {
 		select {
 
-		case cRes := <- c.chairMsgs:
+		case cRes := <-c.chairMsgs:
 			//log.Printf("The chair sent something: %v", cRes)
 			c.battery = cRes.battery
 			c.speed = cRes.speed
 			c.error = cRes.error
-		case sEvent := <- stickChan:
+			if c.cntr%5 == 1 {
+				c.joyServer.send(&cRes)
+			}
+		case sEvent := <-stickChan:
 			//log.Printf("Stick sent something: %v", sEvent)
 			c.handleJoystickEvent(&sEvent)
-		case <- ticker:
+		case <-ticker:
 			//log.Printf("It is time to send data to the chair")
 			start := time.Now()
 			c.sendData()
@@ -85,29 +92,29 @@ func (c *Chair) Loop() {
 
 func (c *Chair) handleJoystickEvent(e *Event) {
 	switch e.code {
-		case 2: //Y axis, right stick
-			c.y = convertDirectionToChair(e.value)
-		case 3: //X axis, right stick (this needs to be flipped to match the joystick)
-			c.x = convertDirectionToChair(e.value) * -1
-		case 8: //Speed down left trigger
-			log.Printf("Slowing down %v", e.value)
+	case 2: //Y axis, right stick
+		c.y = convertDirectionToChair(e.value)
+	case 3: //X axis, right stick (this needs to be flipped to match the joystick)
+		c.x = convertDirectionToChair(e.value) * -1
+	case 8: //Speed down left trigger
+		log.Printf("Slowing down %v", e.value)
 
-			if e.value == 1 {
-				c.pendingCommand = 2
-			}
+		if e.value == 1 {
+			c.pendingCommand = 2
+		}
 
-		case 9: //speed up, right trigger
-			log.Printf("Speeding up %v", e.value)
-			if e.value == 1 {
-				c.pendingCommand = 4
-			}
+	case 9: //speed up, right trigger
+		log.Printf("Speeding up %v", e.value)
+		if e.value == 1 {
+			c.pendingCommand = 4
+		}
 	}
 }
 
 func (c *Chair) sendData() {
-	c.cntr++;
+	c.cntr++
 	payLoad := chairData{typ: 74, command: c.pendingCommand, y: c.y, x: c.x}
-	
+
 	//reset the command
 	c.pendingCommand = 0
 
@@ -145,7 +152,7 @@ func (c *Chair) readLoop() {
 		for {
 			c.device.Read(startByte)
 			if startByte[0] == 84 {
-				break;
+				break
 			}
 		}
 
@@ -157,7 +164,7 @@ func (c *Chair) readLoop() {
 
 		byteReader := bytes.NewReader(input)
 
-		cRes := chairResponse{typ: 84}
+		cRes := ChairResponse{typ: 84}
 
 		binary.Read(byteReader, binary.LittleEndian, &cRes.error)
 		binary.Read(byteReader, binary.LittleEndian, &cRes.unknown2)
@@ -181,7 +188,7 @@ func convertDirectionToChair(in int16) (out int8) {
 	x = x + 128
 
 	//we are just shifting the range from -128 - 127 to -100 -100
-	out = int8((x - -128) * (100 - -100) / (127 - -128) + -100)
+	out = int8((x - -128)*(100 - -100)/(127 - -128) + -100)
 	//log.Printf("%d became %d and then %d", in, x, out);
 
 	return

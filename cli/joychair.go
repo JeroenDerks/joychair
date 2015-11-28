@@ -1,22 +1,22 @@
 package main
 
 import (
-	"os"
-	"log"
-	"github.com/tarm/serial"
-	"github.com/fasmide/joychair"
 	"github.com/BurntSushi/toml"
+	"github.com/fasmide/joychair"
+	"github.com/tarm/serial"
+	"log"
+	"os"
 )
 
 type Config struct {
-	Chair serial.Config
+	Chair    serial.Config
 	Joystick joychair.JoystickConfig
 }
 
 func main() {
-	
+
 	if len(os.Args) <= 1 {
-		log.Fatal("Provide configuration path as first argument");
+		log.Fatal("Provide configuration path as first argument")
 	}
 
 	configPath := os.Args[1]
@@ -34,7 +34,6 @@ func main() {
 	chair := joychair.InitChair(&config.Chair, &joystick)
 
 	chair.Loop()
-
 
 	log.Printf("Bye")
 

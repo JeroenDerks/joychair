@@ -1,10 +1,10 @@
 package joychair
 
 import (
+	"bytes"
 	"encoding/binary"
 	"log"
 	"os"
-	"bytes"
 )
 
 type JoystickConfig struct {
@@ -13,8 +13,7 @@ type JoystickConfig struct {
 
 type Joystick struct {
 	devicePath string
-	device *os.File
-
+	device     *os.File
 }
 
 /*
@@ -28,10 +27,9 @@ type Joystick struct {
  *	};
  */
 
-
 type Event struct {
-	time uint32
-	value int16
+	time      uint32
+	value     int16
 	typ, code uint8
 }
 
