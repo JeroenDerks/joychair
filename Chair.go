@@ -65,6 +65,10 @@ func (c *Chair) Loop() {
 
 	go c.readLoop()
 
+	netEventChan := make(chan JoyNetEvent)
+
+	go c.joyServer.readLoop(netEventChan)
+
 	ticker := time.Tick(10 * time.Millisecond)
 
 	for {
@@ -81,6 +85,8 @@ func (c *Chair) Loop() {
 		case sEvent := <-stickChan:
 			//log.Printf("Stick sent something: %v", sEvent)
 			c.handleJoystickEvent(&sEvent)
+		case nEvent := <-netEventChan:
+			c.handleNetEvent(&nEvent)
 		case <-ticker:
 			//log.Printf("It is time to send data to the chair")
 			start := time.Now()
@@ -109,6 +115,11 @@ func (c *Chair) handleJoystickEvent(e *Event) {
 			c.pendingCommand = 4
 		}
 	}
+}
+
+func (c *Chair) handleNetEvent(e *JoyNetEvent) {
+	c.y = e.y
+	c.x = e.x
 }
 
 func (c *Chair) sendData() {
@@ -186,6 +197,8 @@ func (c *Chair) readLoop() {
 func convertDirectionToChair(in int16) (out int8) {
 	x := ((int32(in) - 32768) * 256) / 65535
 	x = x + 128
+
+	//	return int8(in<<8)
 
 	//we are just shifting the range from -128 - 127 to -100 -100
 	out = int8((x - -128)*(100 - -100)/(127 - -128) + -100)
