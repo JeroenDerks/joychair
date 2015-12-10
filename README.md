@@ -16,6 +16,11 @@ gcc -o sixpair sixpair.c -lusb
 ```
 
 Download qtsixa from http://qtsixa.sourceforge.net/
+
+or
+
+clone from https://github.com/falkTX/qtsixa/
+
 ```
 tar xfvz QtSixA-1.5.1-src.tar.gz
 ```
@@ -61,6 +66,12 @@ Start off by making sure bluetooth is not started on boot
 sudo update-rc.d -f bluetooth remove
 ```
 
+Or if using a newer raspbian with systemd:
+
+```
+sudo systemctl disable bluetooth.service
+```
+
 Then, put this at the *end* of your `/etc/rc.local`
 
 ```
@@ -71,3 +82,8 @@ sixad-bin 0 0 0 &
 
 As you might have guessed, if sixad-bin decides to exit or crash, it may startup the bluetooth service once again and your out of luck :)
 
+Last, makesure joychair is started on boot inside screen so we can re-attach and debug later
+
+```
+screen -dm bash -c 'while true; do ./home/pi/joychair /home/pi/default.toml; sleep 1; done;'
+```
