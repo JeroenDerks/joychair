@@ -67,7 +67,7 @@ func (c *Chair) Loop() {
 
 	netEventChan := make(chan JoyNetEvent)
 
-	go c.joyServer.readLoop(netEventChan)
+	go c.joyServer.ReadLoop(netEventChan)
 
 	ticker := time.Tick(10 * time.Millisecond)
 

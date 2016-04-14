@@ -33,9 +33,13 @@ func InitJoyServer() JoyServer {
 	return server
 }
 
-func (j *JoyServer) readLoop(c chan JoyNetEvent) {
+func (j *JoyServer) ReadLoop(c chan JoyNetEvent) {
 
 	input := make([]byte, 2, 2)
+
+	if j.conn == nil {
+		return
+	}
 
 	for {
 
