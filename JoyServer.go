@@ -5,10 +5,11 @@ import (
 	"encoding/binary"
 	"log"
 	"net"
+	"gopkg.in/redis.v5"
 )
 
 type JoyServer struct {
-	conn *net.UDPConn
+	conn *redis.pubsub
 }
 
 type JoyNetEvent struct {
@@ -18,17 +19,21 @@ type JoyNetEvent struct {
 func InitJoyServer() JoyServer {
 	log.Printf("JoyServer with address: erhm yeah hardcoded...")
 
-	ServerAddr, err := net.ResolveUDPAddr("udp", "195.88.37.61:3001")
-	if err != nil {
-		log.Println("S Error: ", err)
-	}
+	client := redis.NewClient(&redis.Options{
+		//Network:  "unix",
+		//Addr:     "/tmp/redis.sock",
+		Addr:     "127.0.0.1:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
 
-	conn, err := net.DialUDP("udp", nil, ServerAddr)
+	pubsub, err := client.Subscribe("test")
 	if err != nil {
-		log.Println("D Error: ", err)
+		panic(err)
 	}
+	defer pubsub.Close()
 
-	server := JoyServer{conn: conn}
+	server := JoyServer{conn: pubsub}
 
 	return server
 }
@@ -39,13 +44,12 @@ func (j *JoyServer) readLoop(c chan JoyNetEvent) {
 
 	for {
 
-		nBytes, err := j.conn.Read(input)
-
-		if nBytes != 2 {
-			continue
+		msg, err := pubsub.ReceiveMessage()
+		if err != nil {
+			panic(err)
 		}
-
-		byteReader := bytes.NewReader(input)
+		fmt.Println(msg.Channel, msg.Payload)
+		byteReader := bytes.NewReader(msg.Payload)
 
 		event := new(JoyNetEvent)
 

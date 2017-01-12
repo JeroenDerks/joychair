@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/tarm/serial"
+	"gopkg.in/redis.v5"
 	"io"
 	"log"
 	"time"
@@ -53,7 +54,12 @@ func InitChair(c *serial.Config, stick *Joystick) Chair {
 		log.Fatal(err)
 	}
 	joyServer := InitJoyServer()
-	chair := Chair{devicePath: c.Name, device: s, stick: stick, chairMsgs: make(chan ChairResponse), joyServer: &joyServer}
+	chair := Chair{
+		devicePath: c.Name,
+		device:     s,
+		stick:      stick,
+		chairMsgs:  make(chan ChairResponse),
+		joyServer:  &joyServer}
 
 	return chair
 }
