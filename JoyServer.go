@@ -1,15 +1,15 @@
 package joychair
 
 import (
-	"bytes"
-	"encoding/binary"
-	"log"
-	"net"
+	// "bytes"
+	// "encoding/binary"
+	"fmt"
 	"gopkg.in/redis.v5"
+	"log"
 )
 
 type JoyServer struct {
-	conn *redis.pubsub
+	client *redis.Client
 }
 
 type JoyNetEvent struct {
@@ -27,20 +27,22 @@ func InitJoyServer() JoyServer {
 		DB:       0,  // use default DB
 	})
 
-	pubsub, err := client.Subscribe("test")
-	if err != nil {
-		panic(err)
+	server := JoyServer{
+		client: client,
 	}
-	defer pubsub.Close()
-
-	server := JoyServer{conn: pubsub}
 
 	return server
 }
 
 func (j *JoyServer) readLoop(c chan JoyNetEvent) {
 
-	input := make([]byte, 2, 2)
+	// input := make([]byte, 2, 2)
+
+	pubsub, err := j.client.Subscribe("test")
+	if err != nil {
+		panic(err)
+	}
+	defer pubsub.Close()
 
 	for {
 
@@ -49,17 +51,17 @@ func (j *JoyServer) readLoop(c chan JoyNetEvent) {
 			panic(err)
 		}
 		fmt.Println(msg.Channel, msg.Payload)
-		byteReader := bytes.NewReader(msg.Payload)
+		// byteReader := bytes.NewReader(msg.Payload)
 
 		event := new(JoyNetEvent)
 
-		binary.Read(byteReader, binary.LittleEndian, &event.x)
+		// binary.Read(byteReader, binary.LittleEndian, &event.x)
 
-		err = binary.Read(byteReader, binary.LittleEndian, &event.y)
+		// err = binary.Read(byteReader, binary.LittleEndian, &event.y)
 
-		if err != nil {
-			log.Fatal("binary.Read failed:", err)
-		}
+		// if err != nil {
+		// 	log.Fatal("binary.Read failed:", err)
+		// }
 
 		log.Print("I has a net event: %+v", event)
 
@@ -70,6 +72,6 @@ func (j *JoyServer) readLoop(c chan JoyNetEvent) {
 func (j *JoyServer) send(data *ChairResponse) {
 	//lets send some chair data!
 	go func(b []byte) {
-		j.conn.Write(b)
+		j.client.Publish("DynaStatus", "message")
 	}(data.bytes())
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/tarm/serial"
-	"gopkg.in/redis.v5"
 	"io"
 	"log"
 	"time"
@@ -14,7 +13,6 @@ import (
 type Chair struct {
 	devicePath                            string
 	device                                *serial.Port
-	stick                                 *Joystick
 	x, y                                  int8
 	pendingCommand, battery, speed, error uint8
 	chairMsgs                             chan ChairResponse
@@ -45,7 +43,7 @@ func (d *ChairResponse) bytes() []byte {
 	return bytes
 }
 
-func InitChair(c *serial.Config, stick *Joystick) Chair {
+func InitChair(c *serial.Config) Chair {
 	log.Printf("Chair with path: %s", c.Name)
 
 	s, err := serial.OpenPort(c)
@@ -57,7 +55,6 @@ func InitChair(c *serial.Config, stick *Joystick) Chair {
 	chair := Chair{
 		devicePath: c.Name,
 		device:     s,
-		stick:      stick,
 		chairMsgs:  make(chan ChairResponse),
 		joyServer:  &joyServer}
 
@@ -65,9 +62,6 @@ func InitChair(c *serial.Config, stick *Joystick) Chair {
 }
 
 func (c *Chair) Loop() {
-
-	stickChan := make(chan Event)
-	go c.stick.readLoop(stickChan)
 
 	go c.readLoop()
 
@@ -88,9 +82,6 @@ func (c *Chair) Loop() {
 			if c.cntr%5 == 1 {
 				c.joyServer.send(&cRes)
 			}
-		case sEvent := <-stickChan:
-			//log.Printf("Stick sent something: %v", sEvent)
-			c.handleJoystickEvent(&sEvent)
 		case nEvent := <-netEventChan:
 			c.handleNetEvent(&nEvent)
 		case <-ticker:

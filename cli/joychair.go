@@ -2,15 +2,14 @@ package main
 
 import (
 	"github.com/BurntSushi/toml"
-	"github.com/fasmide/joychair"
+	"github.com/JeroenDerks/joychair"
 	"github.com/tarm/serial"
 	"log"
 	"os"
 )
 
 type Config struct {
-	Chair    serial.Config
-	Joystick joychair.JoystickConfig
+	Chair serial.Config
 }
 
 func main() {
@@ -29,12 +28,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	joystick := joychair.InitJoystick(&config.Joystick)
-
-	chair := joychair.InitChair(&config.Chair, &joystick)
+	chair := joychair.InitChair(&config.Chair)
 
 	chair.Loop()
 
 	log.Printf("Bye")
+
+}
+
+func redisSubscribeLoop(c chan joychair.JoyNetEvent) { // reads messages from Redis, checks for priority, and sends to channel
+
+	event := new(joychair.JoyNetEvent)
+
+	//something here
+	c <- *event
 
 }
